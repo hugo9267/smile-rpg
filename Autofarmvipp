@@ -3,6 +3,7 @@ local CoreGui = game:GetService("CoreGui")
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local workspace = game:GetService("Workspace")
+local HttpService = game:GetService("HttpService")
 
 local VirtualUser = game:GetService("VirtualUser")
 Players.LocalPlayer.Idled:Connect(function()
@@ -14,6 +15,27 @@ local autoLootEnabled = false
 local autoPurchaseEnabled = false
 local lootConn = nil
 local purchaseThread = nil
+
+local settingsFile = "SmileRPG_AutoFarm_Settings.json"
+local function saveSettings()
+    if writefile then
+        pcall(function()
+            writefile(settingsFile, HttpService:JSONEncode({autoLoot = autoLootEnabled, autoZone = autoPurchaseEnabled}))
+        end)
+    end
+end
+
+local loadedLoot = false
+local loadedZone = false
+if readfile and isfile and isfile(settingsFile) then
+    pcall(function()
+        local data = HttpService:JSONDecode(readfile(settingsFile))
+        if type(data) == "table" then
+            loadedLoot = data.autoLoot == true
+            loadedZone = data.autoZone == true
+        end
+    end)
+end
 
 -- =========================================================
 -- REMOTES (dùng chung đường dẫn gốc)
@@ -245,7 +267,7 @@ statusLabel.Parent = frame
 -- =========================================================
 -- LOGIC AUTO LOOT
 -- =========================================================
-lootBtn.MouseButton1Click:Connect(function()
+local function toggleLoot()
     autoLootEnabled = not autoLootEnabled
     if autoLootEnabled then
         lootBtn.Text = "Auto Loot: ON"
@@ -268,12 +290,14 @@ lootBtn.MouseButton1Click:Connect(function()
             lootConn = nil
         end
     end
-end)
+    saveSettings()
+end
+lootBtn.MouseButton1Click:Connect(toggleLoot)
 
 -- =========================================================
 -- LOGIC AUTO PURCHASE ZONE (SMART - CHECK TIỀN TRƯỚC)
 -- =========================================================
-zoneBtn.MouseButton1Click:Connect(function()
+local function toggleZone()
     autoPurchaseEnabled = not autoPurchaseEnabled
     if autoPurchaseEnabled then
         zoneBtn.Text = "Auto Zone: ON"
@@ -351,6 +375,14 @@ zoneBtn.MouseButton1Click:Connect(function()
             purchaseThread = nil
         end
     end
-end)
+    saveSettings()
+end
+zoneBtn.MouseButton1Click:Connect(toggleZone)
+
+-- =========================================================
+-- KHÔI PHỤC CÀI ĐẶT SAU KHI LOAD
+-- =========================================================
+if loadedLoot then toggleLoot() end
+if loadedZone then toggleZone() end
 
 print("⚡ Auto Farm Panel đã sẵn sàng!")
